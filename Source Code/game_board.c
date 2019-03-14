@@ -5,7 +5,7 @@
 // Initialise gameboard
 void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2)
 {
-	// Set game board properties
+	// Set game board parameters
 	gameBoard->columns = columns;
 	gameBoard->rows = rows;
 	gameBoard->winCount = winCount;
