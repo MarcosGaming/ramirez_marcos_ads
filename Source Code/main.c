@@ -106,23 +106,37 @@ void RecordingsMenu()
 	struct Record* gamesRecordings = malloc(numberOfRecordings * sizeof(struct Record));
 	// Read the file and create the records
 	int record = 0;
+	int gameMode;
+	char player1[256];
+	char piece1;
+	char player2[256];
+	char piece2;
+	char description[256];
+	int moves[9];
 	while(!feof(file))
 	{
 		// First element is game type, the next four elements are player1 piece1 player2 piece2 and the sixth element is the description
-		fscanf(file, "%d %s %c %s %c %s", &gamesRecordings[record].gameMode, gamesRecordings[record].player1, &gamesRecordings[record].piece1, gamesRecordings[record].player2, &gamesRecordings[record].piece2, gamesRecordings[record].gameDescription);
+		fscanf(file, "%d %s %c %s %c %s", &gameMode, player1, &piece1, player2, &piece2, description);
 		// The last elements until reaching the end of line are the sequence of moves
-		/*char ch;
+		char ch;
+		int count = 0;
 		do
 		{
 			ch = fgetc(file);
 			if (ch != ' ')
 			{
 				int number = ch - '0';
-				enqueue(&gamesRecordings[record].moves, number);
+				moves[count] = number;
+				count++;
+				//enqueue(&gamesRecordings[record].moves, number);
 			}
-		} while (ch != '\n');*/
+		} while (ch != '\n');
 		record++;
-		printf("%d %s %c %s %c %s", gamesRecordings[record].gameMode, gamesRecordings[record].player1, gamesRecordings[record].piece1, gamesRecordings[record].player2, gamesRecordings[record].piece2, gamesRecordings[record].gameDescription);
+		printf("%d %s %c %s %c %s ", gameMode, player1, piece1, player2, piece2, description);
+		for (int i = 0; i < 9; i++)
+		{
+			printf("%d ", moves[i]);
+		}
 	}
 	// Current recording
 	while (1)
