@@ -11,10 +11,10 @@ void MainMenu();
 void RecordingsMenu();
 void Initialise(struct GameBoard*);
 void Draw(struct GameBoard*);
-void GameOver(struct GameBoard*, struct Queue* queue);
-void Update(struct GameBoard*, struct Queue*);
+void GameOver(struct GameBoard*, struct Deque*, struct Stack*, struct Stack*, bool*);
+void Update(struct GameBoard*, struct Deque*, struct Stack*, struct Stack*, bool);
 void positionSelection(struct GameBoard*, int*);
-void recordGameInFile(struct GameBoard*, struct Queue*);
+void recordGameInFile(struct GameBoard*, struct Deque*);
 
 // TIC TAC TOE / CONNECT 4 
 int main( int argc, const char* argv[])
@@ -26,21 +26,29 @@ int main( int argc, const char* argv[])
 	// Game board that is going to be used during all the game
 	struct GameBoard gameBoard;
 	// Queue used to store the movements of the players
-	struct Queue queue;
+	struct Deque deque;
+	// Stack used for undo functionality
+	struct Stack undoStack;
+	// Stack used for redo functionality
+	struct Stack redoStack;
 
 	// Load the game elements
 	Initialise(&gameBoard);
 	Draw(&gameBoard);
 
-	// Initialises the queue to store the game moves based on the gameboard grid size
-	initialiseQueue(&queue, gameBoard.rows * gameBoard.columns);
+	// Initialises the deque and the stacks to store the game moves based on the gameboard grid size
+	initialiseDeque(&deque, gameBoard.rows * gameBoard.columns);
+	initialiseStack(&undoStack, gameBoard.rows * gameBoard.columns);
+	initialiseStack(&redoStack, gameBoard.rows * gameBoard.columns);
 
 	// Game Loop
+	bool player1Turn = true;
 	while (1)
 	{
-		Update(&gameBoard, &queue);
+		Update(&gameBoard, &deque, &undoStack, &redoStack, player1Turn);
 		Draw(&gameBoard);
-		GameOver(&gameBoard, &queue);
+		GameOver(&gameBoard, &deque, &undoStack, &redoStack, &player1Turn);
+		player1Turn = !player1Turn;
 	}
 
 	return 0;
@@ -159,7 +167,7 @@ void RecordingsMenu()
 		// X player always goes first
 		bool player1Turn = true;
 		// Display the moves
-		while (!emptyQueue(&gamesRecordings[i].moves))
+		while (!emptyDeque(&gamesRecordings[i].moves))
 		{
 			// Decide what to do next
 			int selection = 0;
@@ -181,7 +189,7 @@ void RecordingsMenu()
 			if (selection == 1)
 			{
 				// Position to place the piece
-				position = dequeue(&gamesRecordings[i].moves);
+				position = pop_front(&gamesRecordings[i].moves);
 				// Piece
 				if (player1Turn)
 				{
@@ -431,7 +439,7 @@ void Draw(struct GameBoard* gameBoard)
 }
 
 // Checks if the game is over
-void GameOver(struct GameBoard* gameBoard, struct Queue* queue)
+void GameOver(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undoStack, struct Stack* redoStack, bool* player1Turn)
 {
 	if (gameBoard->gameOver)
 	{
@@ -452,16 +460,25 @@ void GameOver(struct GameBoard* gameBoard, struct Queue* queue)
 			scanf("%d", &selection);
 			if (selection == 1)
 			{
+				// Restart gameboard
 				playAgain(gameBoard);
+				// Restart queue
+				resetDeque(deque);
+				// Restart undo stack
+				resetStack(undoStack);
+				// Restart redo stack
+				resetStack(redoStack);
 				// Draw the initial game board again
 				Draw(gameBoard);
+				// Reset player
+				*player1Turn = false;
 				break;
 			}
 			else if (selection == 2)
 			{
 				if (!gameRecorded)
 				{
-					recordGameInFile(gameBoard, queue);
+					recordGameInFile(gameBoard, deque);
 					gameRecorded = true;
 				}
 				else
@@ -479,33 +496,95 @@ void GameOver(struct GameBoard* gameBoard, struct Queue* queue)
 	}
 }
 
-void Update(struct GameBoard* gameBoard, struct Queue* queue)
+void Update(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undoStack, struct Stack* redoStack, bool player1Turn)
 {
-	for (int i = 0; i < 2; i++)
+	// Player 1 is 0, Player 2 is 1
+	int i;
+	if (player1Turn)
 	{
-		// Ask player to select position to place its piece
-		printf("%s select position to place %c : ", gameBoard->players[i].name, gameBoard->players[i].piece);
-		// Make sure that position enter by player is valid
-		int position = 0;
-		positionSelection(gameBoard, &position);
-		// Add position to queue
-		enqueue(queue, position);
-		// Update grid
-		updateGrid(gameBoard, gameBoard->players[i].piece, position);
-		// Check for winner
-		winnerCheck(gameBoard);
-		// The winner is the player that performed the last move
-		if (gameBoard->gameOver)
-		{
-			gameBoard->winnerName = gameBoard->players[i].name;
-			break;
-		}
-		// Check for no longer positions available
-		availablePosCheck(gameBoard);
-		if (gameBoard->gameOver)
+		i = 0;
+	}
+	else
+	{
+		i = 1;
+	}
+
+	// Undo or redo previous action
+	while (1)
+	{
+		printf("Enter 1 to continue | Enter 2 to undo previous movement | Enter 3 to redo previous movement\n");
+		int selection = 0;
+		scanf("%d", &selection);
+		if (selection == 1)
 		{
 			break;
 		}
+		else if (selection == 2)
+		{
+			if (emptyStack(undoStack))
+			{
+				printf("No movements to undo\n");
+				continue;
+			}
+			int undoPosition;
+			undoPosition = stackPop(undoStack);
+			// Add element to redo stack
+			stackPush(redoStack, undoPosition);
+			// Update the grid with '\0'
+			char undoCh = '\0';
+			updateGrid(gameBoard, undoCh, undoPosition);
+			// Remove element of the deque from the back
+			pop_back(deque);
+			return;
+		}
+		else if (selection == 3)
+		{
+			if (emptyStack(redoStack))
+			{
+				printf("No movements to redo\n");
+				continue;
+			}
+			int redoPosition;
+			redoPosition = stackPop(redoStack);
+			// Update the grid based on previous players turn
+			int previousPlayer;
+			updateGrid(gameBoard, gameBoard->players[i].piece, redoPosition);
+			// Add position to deque
+			push_back(deque, redoPosition);
+			// Add element to undo stack
+			stackPush(undoStack, redoPosition);
+			return;
+		}
+		// Clear stdin buffer to avoid infinite loop if string was entered
+		fseek(stdin, 0, SEEK_END);
+	}
+	
+	// Ask player to select position to place its piece
+	printf("%s select position to place %c : ", gameBoard->players[i].name, gameBoard->players[i].piece);
+	// Make sure that position enter by player is valid
+	int position = 0;
+	positionSelection(gameBoard, &position);
+	// Add position to deque
+	push_back(deque, position);
+	// Add position to the stack
+	stackPush(undoStack, position);
+	// Empty redo stack
+	resetStack(redoStack);
+	// Update grid
+	updateGrid(gameBoard, gameBoard->players[i].piece, position);
+	// Check for winner
+	winnerCheck(gameBoard);
+	// The winner is the player that performed the last move
+	if (gameBoard->gameOver)
+	{
+		gameBoard->winnerName = gameBoard->players[i].name;
+		return;
+	}
+	// Check for no longer positions available
+	availablePosCheck(gameBoard);
+	if (gameBoard->gameOver)
+	{
+		return;
 	}
 }
 
@@ -533,7 +612,7 @@ void positionSelection(struct GameBoard* gameBoard, int* position)
 }
 
 // Record the game in a file
-void recordGameInFile(struct GameBoard* gameBoard, struct Queue* queue)
+void recordGameInFile(struct GameBoard* gameBoard, struct Deque* deque)
 {
 	FILE* gameRecordings = fopen("GameRecordings.txt", "a");
 	// The first element to print is the win count which will be used to determine the game type 
@@ -547,9 +626,9 @@ void recordGameInFile(struct GameBoard* gameBoard, struct Queue* queue)
 	scanf("%s", description);
 	fprintf(gameRecordings, "%s ", description);
 	// The final elements to store in the file are the positions played during the game
-	while (!emptyQueue(queue))
+	while (!emptyDeque(deque))
 	{
-		int position = dequeue(queue);
+		int position = pop_front(deque);
 		fprintf(gameRecordings, "%d ", position);
 	}
 	fprintf(gameRecordings, "\n");
