@@ -356,3 +356,18 @@ void playAgain(struct GameBoard* gameBoard)
 		}
 	}
 }
+
+// Frees memory used by game board
+void freeGameBoard(struct GameBoard* gameBoard)
+{
+	for (int i = 0; i < gameBoard->rows; i++)
+	{
+		free(gameBoard->grid[i]);
+	}
+	free(gameBoard->grid);
+	for (int i = 0; i < 2; i++)
+	{
+		free(gameBoard->players[i].name);
+	}
+	free(gameBoard->winnerName);
+}

@@ -37,5 +37,7 @@ void connect4DiagonalCheck(struct GameBoard* gameBoard);
 void availablePosCheck(struct GameBoard* gameBoard);
 // Restarts the game but with same game type and players
 void playAgain(struct GameBoard* gameBoard);
+// Frees memory used by game board
+void freeGameBoard(struct GameBoard* gameBoard);
 
 #endif

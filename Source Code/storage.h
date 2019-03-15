@@ -32,4 +32,11 @@ int dequeue(struct Queue* queue);
 // Checks wheter the queue is empty or not
 bool emptyQueue(struct Queue* queue);
 
+// Record API
+
+// Creates record
+void createRecord(struct Record* record, int gameMode, char* player1, char piece1, char* player2, char piece2, char* description, char* moves);
+// Frees memory used by record
+void freeRecord(struct Record* record);
+
 #endif

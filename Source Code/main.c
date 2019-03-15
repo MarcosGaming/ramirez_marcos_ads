@@ -88,6 +88,7 @@ void RecordingsMenu()
 	}
 	// Go back to the beginning of the file
 	rewind(file);
+
 	// Figure the number of recordings out
 	int numberOfRecordings = 0;
 	while (!feof(file))
@@ -105,44 +106,133 @@ void RecordingsMenu()
 	// Allocate memory for all the recordings
 	struct Record* gamesRecordings = malloc(numberOfRecordings * sizeof(struct Record));
 	// Read the file and create the records
-	int record = 0;
-	int gameMode;
-	char player1[256];
-	char piece1;
-	char player2[256];
-	char piece2;
-	char description[256];
-	int moves[9];
-	while(!feof(file))
+	for(int i = 0; i < numberOfRecordings; i++)
 	{
+		// Temporal buffers to store the elements of a record
+		int gameMode;
+		char player1[256];
+		char piece1;
+		char player2[256];
+		char piece2;
+		char description[256];
+		char moves[256];
 		// First element is game type, the next four elements are player1 piece1 player2 piece2 and the sixth element is the description
-		fscanf(file, "%d %s %c %s %c %s", &gameMode, player1, &piece1, player2, &piece2, description);
+		fscanf(file, "%d %s %c %s %c %s ", &gameMode, player1, &piece1, player2, &piece2, description);
 		// The last elements until reaching the end of line are the sequence of moves
 		char ch;
-		int count = 0;
 		do
 		{
 			ch = fgetc(file);
-			if (ch != ' ')
-			{
-				int number = ch - '0';
-				moves[count] = number;
-				count++;
-				//enqueue(&gamesRecordings[record].moves, number);
-			}
+			strncat(moves, &ch, 1);
+
 		} while (ch != '\n');
-		record++;
-		printf("%d %s %c %s %c %s ", gameMode, player1, piece1, player2, piece2, description);
-		for (int i = 0; i < 9; i++)
+		// Create record and store it in the gameRecordings array
+		createRecord(&gamesRecordings[i], gameMode, player1, piece1, player2, piece2, description, moves);
+		memset(moves, 0, sizeof moves);
+	}
+
+	// Display recordings
+	for (int i = 0; i < numberOfRecordings; i++)
+	{
+		// Rows and columns depend on the game mpde
+		int rows;
+		int columns;
+		if (gamesRecordings[i].gameMode == 3)
 		{
-			printf("%d ", moves[i]);
+			rows = 3;
+			columns = 3;
+		}
+		else
+		{
+			rows = 6;
+			columns = 7;
+		}
+		// Create gameboard for the current record
+		struct GameBoard currentGame;
+		setUpGame(&currentGame, gamesRecordings[i].gameMode, columns, rows, gamesRecordings[i].player1, gamesRecordings[i].player2, gamesRecordings[i].piece1, gamesRecordings[i].piece2);
+
+		// Present record to player
+		printf("\n%s %s:%c %s:%c\n", gamesRecordings[i].gameDescription, gamesRecordings[i].player1, gamesRecordings[i].piece1, gamesRecordings[i].player2, gamesRecordings[i].piece2);
+		// Draw the record
+		Draw(&currentGame);
+
+		// X player always goes first
+		bool player1Turn = true;
+		// Display the moves
+		while (!emptyQueue(&gamesRecordings[i].moves))
+		{
+			// Decide what to do next
+			int selection = 0;
+			while (1)
+			{
+				printf("\nEnter 1 for next move | Enter 2 to exit\n");
+				scanf("%d", &selection);
+				if (selection == 1 || selection == 2 || selection == 3)
+				{
+					break;
+				}
+				// Clear stdin buffer to avoid infinite loop if string is entered
+				fseek(stdin, 0, SEEK_END);
+			}
+			// The update is done automatically without user input
+			int position;
+			char piece;
+			// Player 1 and 2 take turns, starting player1
+			if (selection == 1)
+			{
+				// Position to place the piece
+				position = dequeue(&gamesRecordings[i].moves);
+				// Piece
+				if (player1Turn)
+				{
+					piece = gamesRecordings[i].piece1;
+					player1Turn = false;
+				}
+				else
+				{
+					piece = gamesRecordings[i].piece2;
+					player1Turn = true;
+				}
+				// Update the grid
+				updateGrid(&currentGame, piece, position);
+			}
+			else if (selection == 2)
+			{
+				break;
+			}
+			// Draw the record
+			printf("\n%s %s:%c %s:%c\n", gamesRecordings[i].gameDescription, gamesRecordings[i].player1, gamesRecordings[i].piece1, gamesRecordings[i].player2, gamesRecordings[i].piece2);
+			printf("\nPiece %c place in position %d\n", piece, position);
+			Draw(&currentGame);
+		}
+
+		// Free memory used for the game board
+		freeGameBoard(&currentGame);
+		// Free memory used for the current record
+		freeRecord(&gamesRecordings[i]);
+
+		// Next action
+		printf("\nRecording finished.\n");
+		int selection = 0;
+		while (1)
+		{
+			printf("\nEnter 1 to watch next recording | Enter 2 to start the game.\n");
+			scanf("%d", &selection);
+			if (selection == 1)
+			{
+				break;
+			}
+			else if (selection == 2)
+			{
+				return;
+			}
+			// Clear stdin buffer to avoid infinite loop if string is entered
+			fseek(stdin, 0, SEEK_END);
 		}
 	}
-	// Current recording
-	while (1)
-	{
-
-	}
+	// Free memory used for the records
+	free(gamesRecordings);
+	printf("\nNo more recordings available. Starting game.\n");
 }
 
 
@@ -175,7 +265,6 @@ void Initialise(struct GameBoard* gameBoard)
 			winCount = 4;
 			break;
 		}
-		printf("Selection incorrect, please introduce either 1 or 2\n\n");
 		// Clear stdin buffer to avoid infinite loop if string is entered
 		fseek(stdin, 0, SEEK_END);
 	}
@@ -201,19 +290,18 @@ void Initialise(struct GameBoard* gameBoard)
 		printf("Select player 1 piece: Enter X for crosses | Enter O for noughts\n");
 		char selection;
 		scanf(" %c", &selection);
-		if (selection == 'X')
+		if (selection == 'X' || selection == 'x')
 		{
 			piecePlayer1 = 'X';
 			piecePlayer2 = 'O';
 			break;
 		}
-		else if (selection == 'O')
+		else if (selection == 'O' || selection == 'o')
 		{
 			piecePlayer1 = 'O';
 			piecePlayer2 = 'X';
 			break;
 		}
-		printf("Selection incorrect, please introduce either X or O\n\n");
 		// Clear stdin buffer to avoid infinite loop if string is entered
 		fseek(stdin, 0, SEEK_END);
 	}
@@ -360,7 +448,7 @@ void GameOver(struct GameBoard* gameBoard, struct Queue* queue)
 		while (1)
 		{
 			printf("Enter 1 to play again | Enter 2 to record the game | Enter 3 to exit the game\n");
-			int selection;
+			int selection = 0;
 			scanf("%d", &selection);
 			if (selection == 1)
 			{
@@ -380,14 +468,12 @@ void GameOver(struct GameBoard* gameBoard, struct Queue* queue)
 				{
 					printf("Game already recorded\n");
 				}
-				continue;
 			}
 			else if (selection == 3)
 			{
 				exit(0);
 			}
-			printf("Selection incorrect, please enter either 1, 2 or 3\n");
-			// Clear stdin buffer to avoid infinite loop if string is entered
+			// Clear stdin buffer to avoid infinite loop if string was entered
 			fseek(stdin, 0, SEEK_END);
 		}
 	}
@@ -455,9 +541,11 @@ void recordGameInFile(struct GameBoard* gameBoard, struct Queue* queue)
 	// The next element are the player names with their corresponding pieces
 	fprintf(gameRecordings, "%s %c %s %c ", gameBoard->players[0].name, gameBoard->players[0].piece, gameBoard->players[1].name, gameBoard->players[1].piece);
 	// The next element is a description for the game
-	printf("Enter a short description for this match, for example: Match1WonByJoe. Everything after the first space will be ignored.\n");
+	printf("Enter a short description for this match, for example: Match1WonByJoe. Everything after the first space will be ignored.");
 	char description[256];
-	scanf("%s ", description);
+	fseek(stdin, 0, SEEK_END);
+	scanf("%s", description);
+	fprintf(gameRecordings, "%s ", description);
 	// The final elements to store in the file are the positions played during the game
 	while (!emptyQueue(queue))
 	{
