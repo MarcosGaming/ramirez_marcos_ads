@@ -8,6 +8,7 @@ struct Player
 {
 	char* name; // Name of the player
 	char piece; // Noughts or crosses, 'O' or 'X'
+	bool AI;	// Wheter the player is controlled by an AI or not
 };
 
 // GameBoard struct
@@ -15,6 +16,7 @@ struct GameBoard
 {
 	char** grid;				// Positions
 	bool gameOver;				// Boolean to terminate the game
+	bool AI;					// Wheter the game has an AI or not
 	int winCount;				// 3 for tic tac toe, 4 for connect 4
 	int columns;				// Number of columns
 	int rows;					// Number of rows 
@@ -25,7 +27,7 @@ struct GameBoard
 // GameBoard API
 
 // Initialise gameboard
-void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2);
+void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2, bool AI);
 // Update the grid placing the player piece in the selected position
 void updateGrid(struct GameBoard* gameBoard, char piece, int position);
 // Check for winner

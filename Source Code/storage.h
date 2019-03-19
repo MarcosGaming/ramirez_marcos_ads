@@ -27,7 +27,7 @@ struct Record
 	struct Deque moves;		// Deque that is going to store the moves
 };
 
-// Queue API
+// Deque API
 
 // Initialise the deque
 void initialiseDeque(struct Deque* queue, int max);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 #include "game_board.h"
 #include "storage.h"
 
@@ -13,7 +14,10 @@ void Initialise(struct GameBoard*);
 void Draw(struct GameBoard*);
 void GameOver(struct GameBoard*, struct Deque*, struct Stack*, struct Stack*, bool*);
 void Update(struct GameBoard*, struct Deque*, struct Stack*, struct Stack*, bool);
+void NormalUpdate(struct GameBoard*, struct Deque*, struct Stack*, struct Stack*, int);
+void AIUpdate(struct GameBoard*, struct Deque*, int);
 void positionSelection(struct GameBoard*, int*);
+void AIpositionSelection(struct GameBoard*, int*);
 void recordGameInFile(struct GameBoard*, struct Deque*);
 
 // TIC TAC TOE / CONNECT 4 
@@ -155,9 +159,9 @@ void RecordingsMenu()
 			rows = 6;
 			columns = 7;
 		}
-		// Create gameboard for the current record
+		// Create gameboard for the current record (for the records the AI does not matter)
 		struct GameBoard currentGame;
-		setUpGame(&currentGame, gamesRecordings[i].gameMode, columns, rows, gamesRecordings[i].player1, gamesRecordings[i].player2, gamesRecordings[i].piece1, gamesRecordings[i].piece2);
+		setUpGame(&currentGame, gamesRecordings[i].gameMode, columns, rows, gamesRecordings[i].player1, gamesRecordings[i].player2, gamesRecordings[i].piece1, gamesRecordings[i].piece2, false);
 
 		// Present record to player
 		printf("\n%s %s:%c %s:%c\n", gamesRecordings[i].gameDescription, gamesRecordings[i].player1, gamesRecordings[i].piece1, gamesRecordings[i].player2, gamesRecordings[i].piece2);
@@ -278,18 +282,48 @@ void Initialise(struct GameBoard* gameBoard)
 	}
 	printf("-------------------------------------------------------------------------------------\n");
 
+	// In tic tac toe allow the player to select an AI to play with
+	bool AI = false;
+	if (winCount == 3)
+	{
+		while (1)
+		{
+			printf("Enter 1 to play against a second player | Enter 2 to play against an AI\n");
+			int selection;
+			scanf("%d", &selection);
+			if (selection == 1)
+			{
+				break;
+			}
+			else if (selection == 2)
+			{
+				AI = true;
+				break;
+			}
+			// Clear stdin buffer to avoid infinite loop if string is entered
+			fseek(stdin, 0, SEEK_END);
+		}
+	}
+	printf("-------------------------------------------------------------------------------------\n");
+
 	// Player 1 elements
 	char namePlayer1[256];
 	char piecePlayer1;
 	// Player 2 elements
 	char namePlayer2[256];
 	char piecePlayer2;
-
-	// Enter Players name
+	// Enter Players names
 	printf("Enter player 1 name: ");
 	scanf("%s", namePlayer1);
-	printf("Enter player 2 name: ");
-	scanf("%s", namePlayer2);
+	if (!AI)
+	{
+		printf("Enter player 2 name: ");
+		scanf("%s", namePlayer2);
+	}
+	else
+	{
+		strcpy(namePlayer2, "AI");
+	}
 	printf("-------------------------------------------------------------------------------------\n");
 
 	// Select pieces
@@ -331,7 +365,7 @@ void Initialise(struct GameBoard* gameBoard)
 	printf("-------------------------------------------------------------------------------------\n");
 
 	// Set up game with the parameters selected
-	setUpGame(gameBoard, winCount, columns, rows, namePlayer1, namePlayer2, piecePlayer1, piecePlayer2);
+	setUpGame(gameBoard, winCount, columns, rows, namePlayer1, namePlayer2, piecePlayer1, piecePlayer2, AI);
 }
 
 // Draw the gameboard grid based on its size with the pieces in the positions selected by the players
@@ -509,6 +543,35 @@ void Update(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undo
 		i = 1;
 	}
 
+	// Call sub update based on having AI or not
+	if (gameBoard->AI)
+	{
+		AIUpdate(gameBoard, deque, i);
+	}
+	else
+	{
+		NormalUpdate(gameBoard, deque, undoStack, redoStack, i);
+	}
+
+	// Check for winner
+	winnerCheck(gameBoard);
+	// The winner is the player that performed the last move
+	if (gameBoard->gameOver)
+	{
+		gameBoard->winnerName = gameBoard->players[i].name;
+		return;
+	}
+
+	// Check for no longer positions available
+	availablePosCheck(gameBoard);
+	if (gameBoard->gameOver)
+	{
+		return;
+	}
+}
+
+void NormalUpdate(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undoStack, struct Stack* redoStack, int i)
+{
 	// Undo or redo previous action
 	while (1)
 	{
@@ -547,7 +610,6 @@ void Update(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undo
 			int redoPosition;
 			redoPosition = stackPop(redoStack);
 			// Update the grid based on previous players turn
-			int previousPlayer;
 			updateGrid(gameBoard, gameBoard->players[i].piece, redoPosition);
 			// Add position to deque
 			push_back(deque, redoPosition);
@@ -558,7 +620,6 @@ void Update(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undo
 		// Clear stdin buffer to avoid infinite loop if string was entered
 		fseek(stdin, 0, SEEK_END);
 	}
-	
 	// Ask player to select position to place its piece
 	printf("%s select position to place %c : ", gameBoard->players[i].name, gameBoard->players[i].piece);
 	// Make sure that position enter by player is valid
@@ -572,21 +633,30 @@ void Update(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* undo
 	resetStack(redoStack);
 	// Update grid
 	updateGrid(gameBoard, gameBoard->players[i].piece, position);
-	// Check for winner
-	winnerCheck(gameBoard);
-	// The winner is the player that performed the last move
-	if (gameBoard->gameOver)
-	{
-		gameBoard->winnerName = gameBoard->players[i].name;
-		return;
-	}
-	// Check for no longer positions available
-	availablePosCheck(gameBoard);
-	if (gameBoard->gameOver)
-	{
-		return;
-	}
 }
+
+void AIUpdate(struct GameBoard* gameBoard, struct Deque* deque, int i)
+{
+	int position = 0;
+	if (gameBoard->players[i].AI)
+	{
+		printf("AI selecting position.\n");
+		// AI selects a position to place its piece
+		AIpositionSelection(gameBoard, &position);
+	}
+	else
+	{
+		// Ask player to select position to place its piece
+		printf("%s select position to place %c : ", gameBoard->players[i].name, gameBoard->players[i].piece);
+		// Make sure that position enter by player is valid
+		positionSelection(gameBoard, &position);
+	}
+	// Add position to deque
+	push_back(deque, position);
+	// Update grid
+	updateGrid(gameBoard, gameBoard->players[i].piece, position);
+}
+
 
 // Function to assert that the position entered is correct
 void positionSelection(struct GameBoard* gameBoard, int* position)
@@ -608,6 +678,28 @@ void positionSelection(struct GameBoard* gameBoard, int* position)
 		}
 		// Clear stdin buffer to avoid infinite loop if string is entered
 		fseek(stdin, 0, SEEK_END);
+	}
+}
+
+// Function that selects a random position in the grid for the AI until it picks one available
+void AIpositionSelection(struct GameBoard* gameBoard, int* position)
+{
+	while (1)
+	{
+		srand(time(0));
+		*position = (rand() % ((gameBoard->columns * gameBoard->rows))) + 1;
+		// Map the position entered to grid location
+		int x = (*position - 1) / gameBoard->columns;
+		int y = (*position - 1) % gameBoard->columns;
+		// Position out of range or already taken
+		if (*position <= 0 || *position > (gameBoard->columns * gameBoard->rows) || gameBoard->grid[x][y] != '\0')
+		{
+			continue;
+		}
+		else
+		{
+			break;
+		}
 	}
 }
 

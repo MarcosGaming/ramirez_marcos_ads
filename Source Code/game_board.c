@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // Initialise gameboard
-void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2)
+void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2, bool AI)
 {
 	// Set game board parameters
 	gameBoard->columns = columns;
@@ -11,6 +11,7 @@ void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows,
 	gameBoard->winCount = winCount;
 	gameBoard->gameOver = false;
 	gameBoard->winnerName = '\0';
+	gameBoard->AI = AI;
 
 	// Allocate memory for the grid
 	gameBoard->grid = (char**)malloc(rows * sizeof(char*));
@@ -68,6 +69,10 @@ void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows,
 	// Set the player pieces
 	gameBoard->players[player1].piece = piece1;
 	gameBoard->players[player2].piece = piece2;
+
+	// Set the player AI status
+	gameBoard->players[player1].AI = false;
+	gameBoard->players[player2].AI = AI;
 }
 
 // Update the grid placing the player piece in the selected position
