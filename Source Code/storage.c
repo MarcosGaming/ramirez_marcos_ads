@@ -1,6 +1,5 @@
 #include "storage.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 
 // DEQUE
@@ -59,6 +58,30 @@ int pop_front(struct Deque* deque)
 	}
 	return item;
 }
+// Removes the element at the tail of the deque
+int pop_back(struct Deque* deque)
+{
+	// Get the element at the rear
+	int item = deque->arr[deque->rear];
+	// Replace the element at the rear with -1
+	deque->arr[deque->rear] = -1;
+	// Deque has only one element
+	if (deque->front == deque->rear)
+	{
+		deque->front = -1;
+		deque->rear = -1;
+	}
+	// Tail has reached the beginning
+	else if (deque->rear == 0)
+	{
+		deque->rear = deque->max - 1;
+	}
+	else
+	{
+		deque->rear--;
+	}
+	return item;
+}
 // Returns true if the deque is empty
 bool emptyDeque(struct Deque* deque)
 {
@@ -77,30 +100,6 @@ void resetDeque(struct Deque* deque)
 	}
 	deque->front = -1;
 	deque->rear = -1;
-}
-// Removes the element at the tail of the deque
-int pop_back(struct Deque* deque)
-{
-	// Get the element at the rear
-	int item = deque->arr[deque->rear];
-	// Replace the element at the rear with -1
-	deque->arr[deque->rear] = -1;
-	// Deque has only one element
-	if (deque->front == deque->rear)
-	{
-		deque->front = -1;
-		deque->rear = -1;
-	}
-	// Tail has reached the beginning
-	else if (deque->rear == 0)
-	{
-		deque->rear = deque->max-1;
-	}
-	else
-	{
-		deque->rear--;
-	}
-	return item;
 }
 
 // STACK
@@ -207,6 +206,7 @@ void createRecord(struct Record* record, int gameMode, char* player1, char piece
 	// Add the moves to the deque
 	for (int i = 0; moves[i] != '\0'; i++)
 	{
+		// Two digit numbers
 		if (isdigit(moves[i]) && isdigit(moves[i + 1]))
 		{
 			number[0] = moves[i];
@@ -218,6 +218,7 @@ void createRecord(struct Record* record, int gameMode, char* player1, char piece
 			//Already stored
 			continue;
 		}
+		// One digit numbers
 		else if (isdigit(moves[i]) && !isdigit(moves[i + 1]))
 		{
 			push_back(&record->moves, moves[i] - '0');

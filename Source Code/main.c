@@ -29,7 +29,7 @@ int main( int argc, const char* argv[])
 
 	// Game board that is going to be used during all the game
 	struct GameBoard gameBoard;
-	// Queue used to store the movements of the players
+	// Deque used to store the movements of the players
 	struct Deque deque;
 	// Stack used for undo functionality
 	struct Stack undoStack;
@@ -179,7 +179,7 @@ void RecordingsMenu()
 			{
 				printf("\nEnter 1 for next move | Enter 2 to exit\n");
 				scanf("%d", &selection);
-				if (selection == 1 || selection == 2 || selection == 3)
+				if (selection == 1 || selection == 2)
 				{
 					break;
 				}
@@ -303,8 +303,8 @@ void Initialise(struct GameBoard* gameBoard)
 			// Clear stdin buffer to avoid infinite loop if string is entered
 			fseek(stdin, 0, SEEK_END);
 		}
+		printf("-------------------------------------------------------------------------------------\n");
 	}
-	printf("-------------------------------------------------------------------------------------\n");
 
 	// Player 1 elements
 	char namePlayer1[256];
@@ -496,11 +496,11 @@ void GameOver(struct GameBoard* gameBoard, struct Deque* deque, struct Stack* un
 			{
 				// Restart gameboard
 				playAgain(gameBoard);
-				// Restart queue
+				// Reset queue
 				resetDeque(deque);
-				// Restart undo stack
+				// Reset undo stack
 				resetStack(undoStack);
-				// Restart redo stack
+				// Reset redo stack
 				resetStack(redoStack);
 				// Draw the initial game board again
 				Draw(gameBoard);

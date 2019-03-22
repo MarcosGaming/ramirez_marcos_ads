@@ -1,6 +1,5 @@
 #include "game_board.h"
 #include <stdlib.h>
-#include <stdio.h>
 
 // Initialise gameboard
 void setUpGame(struct GameBoard* gameBoard, int winCount, int columns, int rows, char* name1, char* name2, char piece1, char piece2, bool AI)
@@ -109,6 +108,7 @@ void winnerCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 		}
 	}
@@ -134,6 +134,7 @@ void winnerCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 		}
 	}
@@ -180,6 +181,7 @@ void ticTacToeDiagonalCheck(struct GameBoard* gameBoard)
 		if (counter == gameBoard->winCount)
 		{
 			gameBoard->gameOver = true;
+			return;
 		}
 	}
 
@@ -214,6 +216,7 @@ void ticTacToeDiagonalCheck(struct GameBoard* gameBoard)
 		if (counter == gameBoard->winCount)
 		{
 			gameBoard->gameOver = true;
+			return;
 		}
 	}
 }
@@ -243,6 +246,7 @@ void connect4DiagonalCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 			column++;
 		}
@@ -269,6 +273,7 @@ void connect4DiagonalCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 			row++;
 		}
@@ -296,6 +301,7 @@ void connect4DiagonalCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 			row++;
 		}
@@ -322,6 +328,7 @@ void connect4DiagonalCheck(struct GameBoard* gameBoard)
 			if (counter == gameBoard->winCount)
 			{
 				gameBoard->gameOver = true;
+				return;
 			}
 			column--;
 		}

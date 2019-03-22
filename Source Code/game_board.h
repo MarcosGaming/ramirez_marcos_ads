@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <stdbool.h>
+
 // Player struct
 struct Player
 {
